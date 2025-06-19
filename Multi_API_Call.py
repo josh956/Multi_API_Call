@@ -5,6 +5,20 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import math
 
 st.set_page_config(layout="wide")
+st.markdown(
+    """
+    <style>
+    .element-container {
+        word-break: break-word !important;
+    }
+    .stMarkdown, .stText, .stTextInput, .stSubheader, .stHeader, .stTitle {
+        word-break: break-word !important;
+        white-space: pre-wrap !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 # Get API keys from environment or Streamlit secrets
 OPENAI_API_KEY = os.getenv("General") if os.getenv("General") else st.secrets["General"]["key"]
 GOOGLE_API_KEY = os.getenv("GOOGLE_GENERAL") if os.getenv("GOOGLE_GENERAL") else st.secrets["GOOGLE_GENERAL"]["key"]
@@ -153,4 +167,4 @@ if st.button("Generate Response"):
                     model_choice = model_choices[model_idx]
                     with cols[col_idx]:
                         st.subheader(f"{model_choice} Response:")
-                        st.write(result_dict.get(model_choice, "No response"))
+                        st.text(result_dict.get(model_choice, "No response"))
