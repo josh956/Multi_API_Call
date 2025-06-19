@@ -2,7 +2,7 @@ import os
 import streamlit as st
 from openai import OpenAI
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import math
+import pandas as pd
 
 st.set_page_config(layout="wide")
 st.markdown(
@@ -19,152 +19,202 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-# Get API keys from environment or Streamlit secrets
-OPENAI_API_KEY = os.getenv("General") if os.getenv("General") else st.secrets["General"]["key"]
-GOOGLE_API_KEY = os.getenv("GOOGLE_GENERAL") if os.getenv("GOOGLE_GENERAL") else st.secrets["GOOGLE_GENERAL"]["key"]
-GROK_API_KEY = os.getenv("GROK_GENERAL") if os.getenv("GROK_GENERAL") else st.secrets["GROK_GENERAL"]["key"]
-CLAUDE_API_KEY = os.getenv("ANTHROPIC_GENERAL") if os.getenv("ANTHROPIC_GENERAL") else st.secrets["ANTHROPIC_GENERAL"]["key"]
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_GENERAL") if os.getenv("DEEPSEEK_GENERAL") else st.secrets["DEEPSEEK_GENERAL"]["key"]
 
-def get_model_response(model_choice, prompt):
-    try:
-        # OpenAI (GPT-4.1)
-        if model_choice == "OpenAI (GPT-4.1)":
-            client = OpenAI(api_key=OPENAI_API_KEY)
-            model = "gpt-4.1"
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant. Answer the users questions"
-                    "in 5 sentences or less"},
-                    {"role": "user", "content": prompt}
-                ],
-                stream=False
-            )
-            return model_choice, response.choices[0].message.content
+# --- SIDEBAR ---
+with st.sidebar:
+    st.title("Options")
+    tab = st.radio(
+        "Select a tab:",
+        ["Main App", "Pricing Table", "Model Comparison"]
+    )
 
-        # Google Gemini (Gemini 2.5 Flash)
-        elif model_choice == "Google Gemini (Gemini 2.5 Flash)":
-            client = OpenAI(
-                api_key=GOOGLE_API_KEY,
-                base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-            )
-            model = "gemini-2.5-flash"
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant. Answer the users questions"
-                    "in 5 sentences or less"},
-                    {"role": "user", "content": prompt}
-                ],
-                stream=False
-            )
-            return model_choice, response.choices[0].message.content
+# --- PRICING TABLE TAB ---
+if tab == "Pricing Table":
+    st.header("LLM Pricing Table (per 1M tokens)")
+    st.write("Edit these values in the code as needed.")
 
-        # DeepSeek (DeepSeek Chat)
-        elif model_choice == "DeepSeek (DeepSeek Chat)":
-            client = OpenAI(
-                api_key=DEEPSEEK_API_KEY,
-                base_url="https://api.deepseek.com"
-            )
-            model = "deepseek-chat"
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant. Answer the users questions"
-                    "in 5 sentences or less"},
-                    {"role": "user", "content": prompt}
-                ],
-                stream=False
-            )
-            return model_choice, response.choices[0].message.content
+    pricing_data = {
+        "OpenAI (GPT-4.1)": {"Input": "$2.00", "Output": "$8.00"},
+        "Google Gemini (Gemini 2.5 Flash)": {"Input": "$0.30", "Output": "$2.50"},
+        "DeepSeek (DeepSeek Chat)": {"Input": "$0.27", "Output": "$1.10"},
+        "X.AI (Grok-3)": {"Input": "$3.00", "Output": "$15.00"},
+        "Anthropic (Claude Sonnet 4)": {"Input": "$4.00", "Output": "$15.00"},
+    }
+    st.table(
+        {
+            "Model": list(pricing_data.keys()),
+            "Input Price (per 1M)": [v["Input"] for v in pricing_data.values()],
+            "Output Price (per 1M)": [v["Output"] for v in pricing_data.values()],
+        }
+    )
 
-        # X.AI (Grok-3)
-        elif model_choice == "X.AI (Grok-3)":
-            client = OpenAI(
-                api_key=GROK_API_KEY,
-                base_url="https://api.x.ai/v1"
-            )
-            model = "grok-3"
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant.Answer the users questions"
-                    "in 5 sentences or less"},
-                    {"role": "user", "content": prompt}
-                ],
-                stream=False
-            )
-            return model_choice, response.choices[0].message.content
+# --- MODEL COMPARISON TAB ---
+elif tab == "Model Comparison":
+    st.header("LLM Model Comparison")
+    st.write("Pros and cons for each model across 6 categories.")
 
-        # Anthropic (Claude Sonnet 4)
-        elif model_choice == "Anthropic (Claude Sonnet 4)":
-            client = OpenAI(
-                api_key=CLAUDE_API_KEY,
-                base_url="https://api.anthropic.com/v1/"
-            )
-            model = "claude-sonnet-4-20250514"
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant.Answer the users questions"
-                    "in 5 sentences or less"},
-                    {"role": "user", "content": prompt}
-                ],
-                stream=False
-            )
-            return model_choice, response.choices[0].message.content
-
-    except Exception as e:
-        return model_choice, f"An error occurred with {model_choice}: {e}"
-
-# Streamlit UI
-st.title("LLM API Comparison")
-st.write("Choose a model and tool to generate a response.")
-
-# Dropdown for model selection
-model_choices = st.multiselect(
-    "Select the models/tools:",
-    options=[
+    categories = [
+        "Accuracy",
+        "Speed",
+        "Cost",
+        "Context Length",
+        "Tool Integration",
+        "Multimodal Support"
+    ]
+    models = [
         "OpenAI (GPT-4.1)",
         "Google Gemini (Gemini 2.5 Flash)",
         "DeepSeek (DeepSeek Chat)",
         "X.AI (Grok-3)",
         "Anthropic (Claude Sonnet 4)"
-    ],
-    default=["OpenAI (GPT-4.1)"]  # Optional: pre-select one
-)
+    ]
+    pros_cons = {
+        "OpenAI (GPT-4.1)": [
+            "Very high", "Fast", "Moderate", "Large", "Excellent", "Good"
+        ],
+        "Google Gemini (Gemini 2.5 Flash)": [
+            "High", "Very fast", "Low", "Large", "Good", "Excellent"
+        ],
+        "DeepSeek (DeepSeek Chat)": [
+            "Good", "Fast", "Low", "Medium", "Fair", "Limited"
+        ],
+        "X.AI (Grok-3)": [
+            "Good", "Moderate", "Low", "Medium", "Limited", "Limited"
+        ],
+        "Anthropic (Claude Sonnet 4)": [
+            "High", "Fast", "Moderate", "Very large", "Good", "Good"
+        ],
+    }
+    df = pd.DataFrame(pros_cons, index=categories)
+    st.dataframe(df)
 
-# Input for user prompt
-prompt = st.text_input("Enter your prompt:", placeholder="Type something here...")
+# --- MAIN APP TAB ---
+else:
+    # Get API keys from environment or Streamlit secrets
+    OPENAI_API_KEY = os.getenv("General") if os.getenv("General") else st.secrets["General"]["key"]
+    GOOGLE_API_KEY = os.getenv("GOOGLE_GENERAL") if os.getenv("GOOGLE_GENERAL") else st.secrets["GOOGLE_GENERAL"]["key"]
+    GROK_API_KEY = os.getenv("GROK_GENERAL") if os.getenv("GROK_GENERAL") else st.secrets["GROK_GENERAL"]["key"]
+    CLAUDE_API_KEY = os.getenv("ANTHROPIC_GENERAL") if os.getenv("ANTHROPIC_GENERAL") else st.secrets["ANTHROPIC_GENERAL"]["key"]
+    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_GENERAL") if os.getenv("DEEPSEEK_GENERAL") else st.secrets["DEEPSEEK_GENERAL"]["key"]
 
-# Button to generate response
-if st.button("Generate Response"):
-    if not prompt:
-        st.error("Please enter a prompt.")
-    elif not model_choices:
-        st.error("Please select at least one model.")
-    else:
-        results = []
-        with ThreadPoolExecutor(max_workers=len(model_choices)) as executor:
-            future_to_model = {executor.submit(get_model_response, model_choice, prompt): model_choice for model_choice in model_choices}
-            for future in as_completed(future_to_model):
-                model_choice, response_text = future.result()
-                results.append((model_choice, response_text))
+    st.header("LLM API Comparison")
+    st.write("Choose one or more models/tools to generate and compare responses.")
 
-        # Display results in the order of model_choices
-        if results:
-            cols = st.columns(len(model_choices))
-            # Map model name to its response for easy lookup
-            result_dict = dict(results)
-            max_cols_per_row = 3  # or 2, or whatever you prefer
-            num_models = len(model_choices)
-            num_rows = math.ceil(num_models / max_cols_per_row)
+    model_choices = st.multiselect(
+        "Select the models/tools:",
+        options=[
+            "OpenAI (GPT-4.1)",
+            "Google Gemini (Gemini 2.5 Flash)",
+            "DeepSeek (DeepSeek Chat)",
+            "X.AI (Grok-3)",
+            "Anthropic (Claude Sonnet 4)"
+        ],
+        default=["OpenAI (GPT-4.1)"]
+    )
 
-            for row in range(num_rows):
-                cols = st.columns(min(max_cols_per_row, num_models - row * max_cols_per_row))
-                for col_idx, model_idx in enumerate(range(row * max_cols_per_row, min((row + 1) * max_cols_per_row, num_models))):
-                    model_choice = model_choices[model_idx]
-                    with cols[col_idx]:
+    prompt = st.text_input("Enter your prompt:", placeholder="Type something here...")
+
+    def get_model_response(model_choice, prompt):
+        try:
+            if model_choice == "OpenAI (GPT-4.1)":
+                client = OpenAI(api_key=OPENAI_API_KEY)
+                model = "gpt-4.1"
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant. Answer the users questions in 5 sentences or less"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    stream=False
+                )
+                return model_choice, response.choices[0].message.content
+
+            elif model_choice == "Google Gemini (Gemini 2.5 Flash)":
+                client = OpenAI(
+                    api_key=GOOGLE_API_KEY,
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+                )
+                model = "gemini-2.5-flash"
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant. Answer the users questions in 5 sentences or less"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    stream=False
+                )
+                return model_choice, response.choices[0].message.content
+
+            elif model_choice == "DeepSeek (DeepSeek Chat)":
+                client = OpenAI(
+                    api_key=DEEPSEEK_API_KEY,
+                    base_url="https://api.deepseek.com"
+                )
+                model = "deepseek-chat"
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant. Answer the users questions in 5 sentences or less"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    stream=False
+                )
+                return model_choice, response.choices[0].message.content
+
+            elif model_choice == "X.AI (Grok-3)":
+                client = OpenAI(
+                    api_key=GROK_API_KEY,
+                    base_url="https://api.x.ai/v1"
+                )
+                model = "grok-3"
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant. Answer the users questions in 5 sentences or less"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    stream=False
+                )
+                return model_choice, response.choices[0].message.content
+
+            elif model_choice == "Anthropic (Claude Sonnet 4)":
+                client = OpenAI(
+                    api_key=CLAUDE_API_KEY,
+                    base_url="https://api.anthropic.com/v1/"
+                )
+                model = "claude-sonnet-4-20250514"
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant. Answer the users questions in 5 sentences or less"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    stream=False
+                )
+                return model_choice, response.choices[0].message.content
+
+            else:
+                return model_choice, "Unknown model selected."
+        except Exception as e:
+            return model_choice, f"An error occurred: {e}"
+
+    if st.button("Generate Response"):
+        if not prompt:
+            st.error("Please enter a prompt.")
+        elif not model_choices:
+            st.error("Please select at least one model.")
+        else:
+            results = []
+            with ThreadPoolExecutor(max_workers=len(model_choices)) as executor:
+                future_to_model = {executor.submit(get_model_response, model_choice, prompt): model_choice for model_choice in model_choices}
+                for future in as_completed(future_to_model):
+                    model_choice, response_text = future.result()
+                    results.append((model_choice, response_text))
+
+            if results:
+                cols = st.columns(len(model_choices))
+                result_dict = dict(results)
+                for idx, model_choice in enumerate(model_choices):
+                    with cols[idx]:
                         st.subheader(f"{model_choice} Response:")
-                        st.text(result_dict.get(model_choice, "No response"))
+                        st.markdown(f"<div style='font-family: sans-serif; white-space: pre-wrap'>{result_dict.get(model_choice, 'No response')}</div>", unsafe_allow_html=True)
