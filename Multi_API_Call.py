@@ -83,13 +83,13 @@ def get_model_response(model_choice, prompt):
             )
             return model_choice, response.choices[0].message.content
 
-        # Anthropic (Claude Sonnet 3)
-        elif model_choice == "Anthropic (Claude Sonnet 3)":
+        # Anthropic (Claude Sonnet 4)
+        elif model_choice == "Anthropic (Claude Sonnet 4)":
             client = OpenAI(
                 api_key=CLAUDE_API_KEY,
                 base_url="https://api.anthropic.com/v1/"
             )
-            model = "claude-3-7-sonnet-20250219"
+            model = "claude-sonnet-4-20250514"
             response = client.chat.completions.create(
                 model=model,
                 messages=[
@@ -116,7 +116,7 @@ model_choices = st.multiselect(
         "Google Gemini (Gemini 2.5 Flash)",
         "DeepSeek (DeepSeek Chat)",
         "X.AI (Grok-3)",
-        "Anthropic (Claude Sonnet 3)"
+        "Anthropic (Claude Sonnet 4)"
     ],
     default=["OpenAI (GPT-4.1)"]  # Optional: pre-select one
 )
