@@ -31,7 +31,7 @@ with st.sidebar:
 # --- PRICING TABLE TAB ---
 if tab == "Pricing Table":
     st.header("LLM Pricing Table (per 1M tokens)")
-    st.write("Edit these values in the code as needed.")
+    st.write("Note: DeepSeek provides discounts on pricing based on time of day")
 
     pricing_data = {
         "OpenAI (GPT-4.1)": {"Input": "$2.00", "Output": "$8.00"},
