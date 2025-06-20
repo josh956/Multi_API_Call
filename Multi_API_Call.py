@@ -64,7 +64,7 @@ elif tab == "Model Comparison":
     models = [
         "OpenAI (GPT-4.1)",
         "Google Gemini (Gemini 2.5 Flash)",
-        "DeepSeek (DeepSeek Chat)",
+        "DeepSeek (DeepSeek Chat",
         "X.AI (Grok-3)",
         "Anthropic (Claude Sonnet 4)"
     ]
@@ -97,6 +97,34 @@ else:
     CLAUDE_API_KEY = os.getenv("ANTHROPIC_GENERAL") if os.getenv("ANTHROPIC_GENERAL") else st.secrets["ANTHROPIC_GENERAL"]["key"]
     DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_GENERAL") if os.getenv("DEEPSEEK_GENERAL") else st.secrets["DEEPSEEK_GENERAL"]["key"]
 
+    MODEL_CONFIGS = {
+        "OpenAI (GPT-4.1)": {
+            "api_key": OPENAI_API_KEY,
+            "base_url": None,
+            "model": "gpt-4.1"
+        },
+        "Google Gemini (Gemini 2.5 Flash)": {
+            "api_key": GOOGLE_API_KEY,
+            "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+            "model": "gemini-2.5-flash"
+        },
+        "DeepSeek (DeepSeek Chat)": {
+            "api_key": DEEPSEEK_API_KEY,
+            "base_url": "https://api.deepseek.com",
+            "model": "deepseek-chat"
+        },
+        "X.AI (Grok-3)": {
+            "api_key": GROK_API_KEY,
+            "base_url": "https://api.x.ai/v1",
+            "model": "grok-3"
+        },
+        "Anthropic (Claude Sonnet 4)": {
+            "api_key": CLAUDE_API_KEY,
+            "base_url": "https://api.anthropic.com/v1/",
+            "model": "claude-sonnet-4-20250514"
+        }
+    }
+
     st.header("LLM API Comparison")
     st.write("Choose one or more models/tools to generate and compare responses.")
 
@@ -115,86 +143,28 @@ else:
     prompt = st.text_input("Enter your prompt:", placeholder="Type something here...")
 
     def get_model_response(model_choice, prompt):
+        system_prompt = "You are a helpful assistant. Answer the users questions in 5 sentences or less"
+        
+        config = MODEL_CONFIGS.get(model_choice)
+        if not config:
+            return model_choice, "Unknown model selected."
+
         try:
-            if model_choice == "OpenAI (GPT-4.1)":
-                client = OpenAI(api_key=OPENAI_API_KEY)
-                model = "gpt-4.1"
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": "You are a helpful assistant. Answer the users questions in 5 sentences or less"},
-                        {"role": "user", "content": prompt}
-                    ],
-                    stream=False
-                )
-                return model_choice, response.choices[0].message.content
-
-            elif model_choice == "Google Gemini (Gemini 2.5 Flash)":
-                client = OpenAI(
-                    api_key=GOOGLE_API_KEY,
-                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-                )
-                model = "gemini-2.5-flash"
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": "You are a helpful assistant. Answer the users questions in 5 sentences or less"},
-                        {"role": "user", "content": prompt}
-                    ],
-                    stream=False
-                )
-                return model_choice, response.choices[0].message.content
-
-            elif model_choice == "DeepSeek (DeepSeek Chat)":
-                client = OpenAI(
-                    api_key=DEEPSEEK_API_KEY,
-                    base_url="https://api.deepseek.com"
-                )
-                model = "deepseek-chat"
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": "You are a helpful assistant. Answer the users questions in 5 sentences or less"},
-                        {"role": "user", "content": prompt}
-                    ],
-                    stream=False
-                )
-                return model_choice, response.choices[0].message.content
-
-            elif model_choice == "X.AI (Grok-3)":
-                client = OpenAI(
-                    api_key=GROK_API_KEY,
-                    base_url="https://api.x.ai/v1"
-                )
-                model = "grok-3"
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": "You are a helpful assistant. Answer the users questions in 5 sentences or less"},
-                        {"role": "user", "content": prompt}
-                    ],
-                    stream=False
-                )
-                return model_choice, response.choices[0].message.content
-
-            elif model_choice == "Anthropic (Claude Sonnet 4)":
-                client = OpenAI(
-                    api_key=CLAUDE_API_KEY,
-                    base_url="https://api.anthropic.com/v1/"
-                )
-                model = "claude-sonnet-4-20250514"
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": "You are a helpful assistant. Answer the users questions in 5 sentences or less"},
-                        {"role": "user", "content": prompt}
-                    ],
-                    stream=False
-                )
-                return model_choice, response.choices[0].message.content
-
-            else:
-                return model_choice, "Unknown model selected."
+            client_params = {"api_key": config["api_key"]}
+            if config["base_url"]:
+                client_params["base_url"] = config["base_url"]
+            
+            client = OpenAI(**client_params)
+            
+            response = client.chat.completions.create(
+                model=config["model"],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                stream=False
+            )
+            return model_choice, response.choices[0].message.content
         except Exception as e:
             return model_choice, f"An error occurred: {e}"
 
