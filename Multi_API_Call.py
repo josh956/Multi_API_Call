@@ -143,8 +143,10 @@ else:
     prompt = st.text_input("Enter your prompt:", placeholder="Type something here...")
 
     def get_model_response(model_choice, prompt):
-        system_prompt = "You are a helpful assistant. Answer the users questions in 5 sentences or less"
+        system_prompt = "You are a helpful assistant. You MUST answer in 5 sentences or less. This is a strict rule."
         
+        user_prompt_with_constraint = f"{prompt}\n\nReminder: Your response must be no more than 5 sentences."
+
         config = MODEL_CONFIGS.get(model_choice)
         if not config:
             return model_choice, "Unknown model selected."
@@ -160,7 +162,7 @@ else:
                 model=config["model"],
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": user_prompt_with_constraint}
                 ],
                 stream=False
             )
